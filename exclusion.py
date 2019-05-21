@@ -7,7 +7,11 @@ UNIVERSE: set = set()
 
 def normalize(field):
     field = field.lower().strip()
-    tokens = (ABBV[t] if t in ABBV else t for t in field.split())
+    tokens = field.split()
+    if len(tokens) > 1:
+        t = tokens[-1]
+        if t in ABBV:
+            tokens[-1] = ABBV[t]
     return ' '.join(tokens)
 
 
