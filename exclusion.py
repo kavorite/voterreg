@@ -49,8 +49,11 @@ class MonroeCtRecord(object):
         return tuple(getattr(self, k) for k in self.__class__.__slots__)
 
     def is_bulk(self):
-        return 'family res' not in self.prop_desc.lower()
+        return 'fam' not in self.prop_desc.lower()
 
+    def is_single(self):
+        return self.prop_desc.lower().startswith('1 fam')
+    
 
 def universe(istrm):
     '''
@@ -105,7 +108,7 @@ if __name__ == '__main__':
     istrm = open(args.registered)
     R = set(registered(istrm))
 
-    X = (ent for ent in U if ent.is_bulk() or ent.address() not in R)
+    X = (ent for ent in U if ent.is_single() and ent.address() not in R)
 
     if args.opath is None:
         from sys import stdout
