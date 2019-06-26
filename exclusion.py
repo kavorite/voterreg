@@ -108,7 +108,7 @@ if __name__ == '__main__':
     istrm = open(args.registered)
     R = set(registered(istrm))
 
-    X = (ent for ent in U if ent.is_single() and ent.address() not in R)
+    X = (ent for ent in U if ent.address() not in R and (not ent.is_bulk()))
 
     if args.opath is None:
         from sys import stdout
