@@ -4,13 +4,13 @@ from usps_abbv import ABBREVIATIONS as ABBV
 
 
 class StreetAddress(object):
-    def __init__(self, city: str, st: str, nr: str):
-        self.city = city.lower().strip()
+    def __init__(self, zip_code: str, st: str, nr: str):
+        self.zip = zip_code
         self.street = self.__class__.normalize(st)
         self.number = nr
 
     def tuple(self):
-        return (self.city, self.street, self.number)
+        return (self.street, self.number)
 
     @staticmethod
     def normalize(street):
@@ -43,14 +43,14 @@ class MonroeCtRecord(object):
 
     def address(self) -> StreetAddress:
         st = f'{self.loc_st_name} {self.loc_st_type}'
-        return StreetAddress(self.city, st, self.st_nbr)
+        return StreetAddress(self.par_zip, st, self.st_nbr)
 
     def tuple(self):
         return tuple(getattr(self, k) for k in self.__class__.__slots__)
 
     def is_bulk(self):
         return 'family res' not in self.prop_desc.lower()
-            
+
 
 def universe(istrm):
     '''
@@ -70,15 +70,15 @@ def registered(istrm):
     current registrants by counting their occurrences in the given record
     stream.
     '''
-    BOEIDX_CITY = 11
+    # BOEIDX_CITY = 11
     BOEIDX_DLVY_NR = 5
     BOEIDX_DLVY_ST = 6
-    # BOEIDX_ZIP = 13
+    BOEIDX_ZIP = 13
     rows = csv.reader(istrm)
     next(rows)  # discard header
     for ent in rows:
         record = StreetAddress(
-                ent[BOEIDX_CITY],
+                ent[BOEIDX_ZIP],
                 ent[BOEIDX_DLVY_ST],
                 ent[BOEIDX_DLVY_NR])
         yield record
