@@ -42,8 +42,7 @@ class MonroeCtRecord(object):
             setattr(self, k, next(row))
 
     def address(self) -> StreetAddress:
-        st = f'{self.loc_st_name} {self.loc_st_type}'
-        return StreetAddress(self.par_zip, st, self.st_nbr)
+        return StreetAddress(self.par_zip, self.gis_st_name, self.st_nbr)
 
     def tuple(self):
         return tuple(getattr(self, k) for k in self.__class__.__slots__)
@@ -66,9 +65,8 @@ def universe(istrm):
 
 def registered(istrm):
     '''
-    registered() creates a mapping of registered addresses to a number of
-    current registrants by counting their occurrences in the given record
-    stream.
+    registered() instantiates a generator of BoE registered addresses from
+    the input stream.
     '''
     # BOEIDX_CITY = 11
     BOEIDX_DLVY_NR = 5
