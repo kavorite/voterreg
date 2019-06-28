@@ -12,11 +12,22 @@ class StreetAddress(object):
     def tuple(self):
         return (self.street, self.number)
 
+    _cardinal = {
+        'n': 'north',
+        'e': 'east',
+        's': 'south',
+        'w': 'west',
+    }
+
     @staticmethod
     def normalize(street):
         street = street.lower().strip()
         tokens = street.split()
         if len(tokens) > 1:
+            for i in range(len(tokens))
+                if tokens[i] in self.__class__._cardinal:
+                    tokens[i] = self.__class__._cardinal[tokens[i]]
+
             t = tokens[-1]
             if t in ABBV:
                 tokens[-1] = ABBV[t]
