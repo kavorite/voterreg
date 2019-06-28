@@ -19,14 +19,14 @@ class StreetAddress(object):
         'w': 'west',
     }
 
-    @staticmethod
-    def normalize(street):
+    @classmethod
+    def normalize(cls, street):
         street = street.lower().strip()
         tokens = street.split()
         if len(tokens) > 1:
-            for i in range(len(tokens))
-                if tokens[i] in self.__class__._cardinal:
-                    tokens[i] = self.__class__._cardinal[tokens[i]]
+            for i in range(len(tokens)):
+                if tokens[i] in cls._cardinal:
+                    tokens[i] = cls._cardinal[tokens[i]]
 
             t = tokens[-1]
             if t in ABBV:
