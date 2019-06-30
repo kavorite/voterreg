@@ -31,6 +31,10 @@ class StreetAddress(object):
             for i in range(len(tokens)):
                 if tokens[i] in cls._cardinal:
                     tokens[i] = cls._cardinal[tokens[i]]
+            if tokens[0] in cls._cardinal:
+                t = tokens[0]
+                tokens = tokens[1:]
+                tokens.append(cls._cardinal[t])
 
             t = tokens[-1]
             if t in ABBV:
@@ -65,6 +69,9 @@ class MonroeCtRecord(object):
 
     def tuple(self):
         return tuple(getattr(self, k) for k in self.__class__.__slots__)
+
+    def __str__(self):
+        return '{self.st_nbr} {self.gis_st_name}, {self.city}, {self.par_zip}, USA'
 
     def is_bulk(self):
         return 'family res' not in self.prop_desc.lower()
