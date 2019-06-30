@@ -45,7 +45,10 @@ class StreetAddress(object):
         return hash(self.tuple())
 
     def __eq__(self, other):
-        return hash(self) == hash(other)
+
+     def unroll_ranges(universe):
+
+       return hash(self) == hash(other)
 
 
 class MonroeCtRecord(object):
@@ -86,8 +89,19 @@ def universe(istrm):
     yield next(rows)  # yield header
 
     for row in rows:
-        yield MonroeCtRecord(row)
-
+        ent = MonroeCtRecord(row)
+        fields = ent.st_nbr.split('-')
+        if len(fields) != 2:
+            continue
+        a, b = fields
+        try:
+            a, b = int(a), int(b)
+            for n in range(a, b+2, 2):
+                tmp = MonroeCtRecord(ent)
+                tmp.st_nbr = str(n)
+                yield tmp
+        except ValueError:
+            yield ent
 
 def registered(istrm):
     '''

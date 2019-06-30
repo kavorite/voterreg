@@ -1,24 +1,9 @@
 import csv
 import json
+# import pdb
 from xml.etree import ElementTree
 from aiohttp import ClientSession as HTTP
 from exclusion import MonroeCtRecord
-
-
-def unroll_ranges(universe):
-    for ent in universe:
-        fields = ent.st_nbr.split('-')
-        if len(fields) != 2:
-            continue
-        a, b = fields
-        try:
-            a, b = int(a), int(b)
-        except ValueError:
-            continue
-        for n in range(a, b+1):
-            tmp = MonroeCtRecord(ent)
-            tmp.st_nbr = str(n)
-            yield tmp
 
 
 async def is_valid(http: HTTP, hereIdent: str, hereKey: str, addr: MonroeCtRecord):
@@ -58,7 +43,6 @@ def valid(universe, hereIdent, hereKey):
             yield universe[i]
 
 
-
 if __name__ == '__main__':
     from argparse import ArgumentParser
     from exclusion import universe
@@ -84,14 +68,13 @@ if __name__ == '__main__':
     stenographer = csv.writer(ostrm)
     spool = universe(istrm)
     stenographer.writerow(next(spool))  # copy header
-    output = unroll_ranges(spool)
     if args.validate:
         if args.id is None:
             raise Exception('cmdline: please pass --id to validate addresses')
         if args.key is None:
             raise Exception('cmdline: please pass --key to validaate addresses')
-        output = valid(output, args.id, args.key)
-    for ent in output:
+        spool = valid(spool, args.id, args.key)
+    for ent in spool:
         stenographer.writerow(ent.tuple())
 
-    
+
