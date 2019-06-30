@@ -10,13 +10,17 @@ class StreetAddress(object):
         self.number = nr
 
     def tuple(self):
-        return (self.street, self.number)
+        return (self.zip, self.street, self.number)
 
     _cardinal = {
         'n': 'north',
         'e': 'east',
         's': 'south',
         'w': 'west',
+        'nw': 'northwest',
+        'ne': 'northeast',
+        'sw': 'southwest',
+        'se': 'southeast',
     }
 
     @classmethod
