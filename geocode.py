@@ -30,8 +30,6 @@ async def is_valid(http: HTTP, hereIdent: str, hereKey: str, addr: MonroeCtRecor
             return False
 
 
-# TODO: output whether all address ranges are on the same side of the street
-# (evenness parity predicate)
 def valid(universe, hereIdent, hereKey):
     universe = tuple(universe)
     with HTTP() as http:
