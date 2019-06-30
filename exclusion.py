@@ -52,9 +52,13 @@ class MonroeCtRecord(object):
                  "fe_name", "fe_type", "p_name", "pol_address")
 
     def __init__(self, row):
-        row = iter(row)
-        for k in self.__class__.__slots__:
-            setattr(self, k, next(row))
+        if row.__class__ == self.__class__:
+            for k in self.__class__.__slots__:
+                setattr(self, k, getattr(row, k))
+        else:
+            row = iter(row)
+            for k in self.__class__.__slots__:
+                setattr(self, k, next(row))
 
     def address(self) -> StreetAddress:
         return StreetAddress(self.par_zip, self.gis_st_name, self.st_nbr)
