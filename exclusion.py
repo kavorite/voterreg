@@ -9,7 +9,7 @@ class StreetAddress(object):
     def __init__(self, zip_code: str, st: str, nr: str):
         self.zip = zip_code
         self.street = self.__class__.normalize(st)
-        self.number = re.sub(halfpattern, r'\1.5', nr)
+        self.number = re.sub(HALFPATTERN, r'\1.5', nr)
 
     def tuple(self):
         return (self.zip, self.street, self.number)
@@ -65,7 +65,7 @@ class MonroeCtRecord(object):
             row = iter(row)
             for k in self.__class__.__slots__:
                 setattr(self, k, next(row))
-        ent.st_nbr = re.sub(halfpattern, r'\1.5', ent.st_nbr)
+        ent.st_nbr = re.sub(HALFPATTERN, r'\1.5', ent.st_nbr)
 
     def address(self) -> StreetAddress:
         return StreetAddress(self.par_zip, self.gis_st_name, self.st_nbr)
