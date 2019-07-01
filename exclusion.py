@@ -4,12 +4,12 @@ from usps_abbv import ABBREVIATIONS as ABBV
 from math import floor
 import itertools as it
 
-
+HALFPATTERN = re.compile('([0-9]+) 1/2')
 class StreetAddress(object):
     def __init__(self, zip_code: str, st: str, nr: str):
         self.zip = zip_code
         self.street = self.__class__.normalize(st)
-        self.number = nr
+        self.number = re.sub(halfpattern, r'\1.5', nr)
 
     def tuple(self):
         return (self.zip, self.street, self.number)
@@ -65,6 +65,7 @@ class MonroeCtRecord(object):
             row = iter(row)
             for k in self.__class__.__slots__:
                 setattr(self, k, next(row))
+        ent.st_nbr = re.sub(halfpattern, r'\1.5', ent.st_nbr)
 
     def address(self) -> StreetAddress:
         return StreetAddress(self.par_zip, self.gis_st_name, self.st_nbr)
@@ -86,7 +87,6 @@ def universe(istrm):
     '''
     rows = csv.reader(istrm)
     yield next(rows)  # yield header
-    halfpattern = re.compile('([0-9]+) 1/2')
     rangedelim = re.compile('[-&]')
     for row in rows:
         ent = MonroeCtRecord(row)
