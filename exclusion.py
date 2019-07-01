@@ -65,7 +65,7 @@ class MonroeCtRecord(object):
             row = iter(row)
             for k in self.__class__.__slots__:
                 setattr(self, k, next(row))
-        ent.st_nbr = re.sub(HALFPATTERN, r'\1.5', ent.st_nbr)
+        self.st_nbr = re.sub(HALFPATTERN, r'\1.5', self.st_nbr)
 
     def address(self) -> StreetAddress:
         return StreetAddress(self.par_zip, self.gis_st_name, self.st_nbr)
