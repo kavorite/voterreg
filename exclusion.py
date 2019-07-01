@@ -90,7 +90,6 @@ def universe(istrm):
     rangedelim = re.compile('[-&]')
     for row in rows:
         ent = MonroeCtRecord(row)
-        ent.st_nbr = re.sub(halfpattern, r'\1.5', ent.st_nbr)
         try:
             a, b = rangedelim.split(ent.st_nbr)
             a, b = float(a), float(b)
