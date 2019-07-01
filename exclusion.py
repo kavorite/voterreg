@@ -4,7 +4,9 @@ from usps_abbv import ABBREVIATIONS as ABBV
 from math import floor
 import itertools as it
 
-HALFPATTERN = re.compile('([0-9]+) 1/2')
+HALFPATTERN = re.compile('([0-9]+) 1/2?')
+
+
 class StreetAddress(object):
     def __init__(self, zip_code: str, st: str, nr: str):
         self.zip = zip_code
@@ -25,6 +27,8 @@ class StreetAddress(object):
         'se': 'southeast',
     }
 
+    _directions = set(_cardinal.values())
+
     @classmethod
     def normalize(cls, street):
         street = street.lower().strip()
@@ -33,10 +37,10 @@ class StreetAddress(object):
             for i in range(len(tokens)):
                 if tokens[i] in cls._cardinal:
                     tokens[i] = cls._cardinal[tokens[i]]
-            if tokens[0] in cls._cardinal:
+            if tokens[0] in cls._directions:
                 t = tokens[0]
                 tokens = tokens[1:]
-                tokens.append(cls._cardinal[t])
+                tokens.append(t)
 
             t = tokens[-1]
             if t in ABBV:
