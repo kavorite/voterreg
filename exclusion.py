@@ -1,6 +1,8 @@
 import csv
 import re
 from usps_abbv import ABBREVIATIONS as ABBV
+from math import floor
+import itertools as it
 
 
 class StreetAddress(object):
@@ -45,9 +47,6 @@ class StreetAddress(object):
         return hash(self.tuple())
 
     def __eq__(self, other):
-
-     def unroll_ranges(universe):
-
        return hash(self) == hash(other)
 
 
@@ -74,7 +73,7 @@ class MonroeCtRecord(object):
         return tuple(getattr(self, k) for k in self.__class__.__slots__)
 
     def __str__(self):
-        return '{self.st_nbr} {self.gis_st_name}, {self.city}, {self.par_zip}, USA'
+        return f'{self.st_nbr} {self.gis_st_name}, {self.city}, {self.par_zip}, USA'
 
     def is_bulk(self):
         return 'family res' not in self.prop_desc.lower()
@@ -87,16 +86,23 @@ def universe(istrm):
     '''
     rows = csv.reader(istrm)
     yield next(rows)  # yield header
-
+    halfpattern = re.compile('([0-9]+) 1/2')
+    rangedelim = re.compile('[-&]')
     for row in rows:
         ent = MonroeCtRecord(row)
-        fields = ent.st_nbr.split('-')
-        if len(fields) != 2:
-            continue
-        a, b = fields
+        ent.st_nbr = re.sub(halfpattern, r'\1.5', ent.st_nbr)
         try:
-            a, b = int(a), int(b)
-            for n in range(a, b+2, 2):
+            a, b = rangedelim.split(ent.st_nbr)
+            a, b = float(a), float(b)
+            if a > b:
+                a, b = b, a
+            enum = range(int(a), int(b), 2)
+            if floor(b) != floor(b):
+                enum = it.chain(enum, (b,))
+            if floor(a) != floor(a):
+                enum = it.chain((a,), enum)
+
+            for n in enum:
                 tmp = MonroeCtRecord(ent)
                 tmp.st_nbr = str(n)
                 yield tmp
