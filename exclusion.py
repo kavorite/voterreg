@@ -1,7 +1,7 @@
 import csv
 import re
 from usps_abbv import ABBREVIATIONS as ABBV
-from math import floor
+from math import floor, ceil
 import itertools as it
 from sys import stderr
 from collections import deque
@@ -105,12 +105,24 @@ class AddressRange(object):
         self.start = start
         self.end = end
 
+    def __len__(self):
+        a = floor(self.start)
+        b = floor(self.end)
+        n = (b - a) / 2
+        if floor(b) != b:
+            n += 1
+        if floor(a) != a:
+            n += 1
+        return floor(n)
+
+
+
     def __iter__(self):
         a, b = self.start, self.end
         enum = range(int(a), int(b), 2)
-        if floor(b) != floor(b):
+        if floor(b) != b:
             enum = it.chain(enum, (b,))
-        if floor(a) != floor(a):
+        if floor(a) != a:
             enum = it.chain((a,), enum)
 
         for n in enum:
@@ -166,7 +178,6 @@ def exclusion(universe, registered, unrollp, unroll_max):
         queue = universe
     for ent in queue:
         if hasattr(ent, '__iter__'):
-            ent = tuple(ent)
             if unroll_max < 0 or len(ent) <= unroll_max:
                 queue = it.chain(queue, ent)
         elif ent.address() not in registered:
@@ -191,7 +202,7 @@ if __name__ == '__main__':
     parser.add_argument('--unrollmax',
                         type=int,
                         help='max. number of addresses to unroll',
-                        default=4)
+                        default=3)
     args = parser.parse_args()
     # Instantiate a generator to read in the solution set of addresses
     istrm = open(args.universe)
