@@ -108,13 +108,11 @@ class AddressRange(object):
     def __len__(self):
         a = floor(self.start)
         b = floor(self.end)
-        n = (b - a) / 2
+        n = (b - a) // 2
         if floor(b) != b:
             n += 1
         if floor(a) != a:
             n += 1
-        return floor(n)
-
 
 
     def __iter__(self):
