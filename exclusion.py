@@ -53,7 +53,6 @@ class StreetAddress(object):
                 # Abbreviate/canonicalize the qualifier
                 if tokens[1] in ABBV:
                     tokens[1] = ABBV[tokens[1]]
-                break
 
         return ' '.join(tokens)
 
