@@ -3,6 +3,7 @@ import re
 from usps_abbv import ABBREVIATIONS as ABBV
 from math import floor
 import itertools as it
+from sys import stderr
 
 HALFPATTERN = re.compile('([0-9]+) 1/2?')
 
@@ -27,31 +28,40 @@ class StreetAddress(object):
         'se': 'southeast',
     }
 
-    _directions = set(_cardinal.values())
+    _directions = set(it.chain(_cardinal.keys(), _cardinal.values()))
+    _qualifiers = set(it.chain(ABBV.keys(), ABBV.values()))
 
     @classmethod
+    # N Herald Circle -> heraldcircle north internally
     def normalize(cls, street):
         street = street.lower().strip()
         tokens = street.split()
-        if len(tokens) > 1:
-            for i in range(len(tokens)):
-                if tokens[i] in cls._cardinal:
-                    tokens[i] = cls._cardinal[tokens[i]]
-            if tokens[0] in cls._directions:
-                t = tokens[0]
-                tokens = tokens[1:]
+        for i in reversed(range(len(tokens))):
+            # move cardinal qualifiers to end in reverse order of appearance,
+            # if present
+            if tokens[i] in cls._directions:
+                t = tokens[i]
+                tokens = tokens[:i] + tokens[i+1:]
+                i -= 1
+                if t in cls._cardinal:
+                    t = cls._cardinal[t]
                 tokens.append(t)
+            # collapse all tokens before the last street qualifier into a
+            # single word
+            elif tokens[i] in cls._qualifiers:
+                tokens = [''.join(tokens[:i])] + tokens[i:]
+                # Abbreviate/canonicalize the qualifier
+                if tokens[1] in ABBV:
+                    tokens[1] = ABBV[tokens[1]]
+                break
 
-            t = tokens[-1]
-            if t in ABBV:
-                tokens[-1] = ABBV[t]
-        return ' '.join(tokens).lower()
+        return ' '.join(tokens)
 
     def __hash__(self):
         return hash(self.tuple())
 
     def __eq__(self, other):
-       return hash(self) == hash(other)
+        return hash(self) == hash(other)
 
 
 class MonroeCtRecord(object):
@@ -75,13 +85,37 @@ class MonroeCtRecord(object):
         return StreetAddress(self.par_zip, self.gis_st_name, self.st_nbr)
 
     def tuple(self):
-        return tuple(getattr(self, k) for k in self.__class__.__slots__)
+        rtn = [getattr(self, k) for k in self.__class__.__slots__]
+        rtn.append(str(self))
+        return tuple(rtn)
 
     def __str__(self):
-        return f'{self.st_nbr} {self.gis_st_name}, {self.city}, {self.par_zip}, USA'
+        return (f'{self.st_nbr} {self.gis_st_name}'
+                f', {self.city}, {self.par_zip}, USA')
 
     def is_bulk(self):
         return 'family res' not in self.prop_desc.lower()
+
+
+class AddressRange(object):
+    def __init__(self, ent: MonroeCtRecord, start: float, end: float):
+        if start > end:
+            start, end = end, start
+        self.start = start
+        self.end = end
+
+    def __iter__(self):
+        a, b = self.start, self.end
+        enum = range(int(a), int(b), 2)
+        if floor(b) != floor(b):
+            enum = it.chain(enum, (b,))
+        if floor(a) != floor(a):
+            enum = it.chain((a,), enum)
+
+        for n in enum:
+            x = MonroeCtRecord(ent)
+            x.st_nbr = str(n)
+            yield x
 
 
 def universe(istrm):
@@ -96,21 +130,11 @@ def universe(istrm):
         ent = MonroeCtRecord(row)
         try:
             a, b = rangedelim.split(ent.st_nbr)
-            a, b = float(a), float(b)
-            if a > b:
-                a, b = b, a
-            enum = range(int(a), int(b), 2)
-            if floor(b) != floor(b):
-                enum = it.chain(enum, (b,))
-            if floor(a) != floor(a):
-                enum = it.chain((a,), enum)
-
-            for n in enum:
-                tmp = MonroeCtRecord(ent)
-                tmp.st_nbr = str(n)
-                yield tmp
+            enum = AddressRange(ent, float(a), float(b))
+            yield enum
         except ValueError:
             yield ent
+
 
 def registered(istrm):
     '''
@@ -124,11 +148,23 @@ def registered(istrm):
     rows = csv.reader(istrm)
     next(rows)  # discard header
     for ent in rows:
-        record = StreetAddress(
-                ent[BOEIDX_ZIP],
-                ent[BOEIDX_DLVY_ST],
-                ent[BOEIDX_DLVY_NR])
+        try:
+            record = StreetAddress(
+                    ent[BOEIDX_ZIP],
+                    ent[BOEIDX_DLVY_ST],
+                    ent[BOEIDX_DLVY_NR])
+        except Exception:
+            continue
         yield record
+
+
+def exclusion(universe, registered, unrollp):
+    records = (ent for ent in universe if unrollp == hasattr(ent, '__iter__'))
+    if not unrollp:
+        records = (records,)
+    for enum in records:
+        yield from (ent for ent in enum
+                    if ent.address() not in registered)
 
 
 if __name__ == '__main__':
@@ -143,16 +179,20 @@ if __name__ == '__main__':
     parser.add_argument('--opath',
                         help='output path',
                         default=None)
+    parser.add_argument('--unroll',
+                        help=('whether to output generated address ranges'
+                              ' or everything else'),
+                        action='store_true')
     args = parser.parse_args()
     # Instantiate a generator to read in the solution set of addresses
     istrm = open(args.universe)
     U = universe(istrm)
-    header = next(U)
+    header = list(next(U))
+    header.append('CANON')
 
     istrm = open(args.registered)
     R = set(registered(istrm))
-
-    X = (ent for ent in U if ent.is_bulk() or ent.address() not in R)
+    X = exclusion(U, R, args.unroll)
 
     if args.opath is None:
         from sys import stdout
