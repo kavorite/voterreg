@@ -36,7 +36,8 @@ class StreetAddress(object):
     def normalize(cls, street):
         street = street.lower().strip()
         tokens = street.split()
-        for i in reversed(range(len(tokens))):
+        i = len(tokens) - 1
+        while i > 0:
             # move cardinal qualifiers to end in reverse order of appearance,
             # if present
             if tokens[i] in cls._directions:
@@ -53,6 +54,7 @@ class StreetAddress(object):
                 # Abbreviate/canonicalize the qualifier
                 if tokens[1] in ABBV:
                     tokens[1] = ABBV[tokens[1]]
+            i -= 1
 
         return ' '.join(tokens)
 
