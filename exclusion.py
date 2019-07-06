@@ -4,6 +4,7 @@ from usps_abbv import ABBREVIATIONS as ABBV
 from math import floor
 import itertools as it
 from sys import stderr
+from collections import deque
 
 HALFPATTERN = re.compile('([0-9]+) 1/2?')
 
@@ -158,13 +159,18 @@ def registered(istrm):
         yield record
 
 
-def exclusion(universe, registered, unrollp):
-    records = (ent for ent in universe if unrollp == hasattr(ent, '__iter__'))
-    if not unrollp:
-        records = (records,)
-    for enum in records:
-        yield from (ent for ent in enum
-                    if ent.address() not in registered)
+def exclusion(universe, registered, unrollp, unroll_max):
+    if unrollp:
+        queue = (ent for ent in universe if hasattr(ent, '__iter__'))
+    else:
+        queue = universe
+    for ent in queue:
+        if hasattr(ent, '__iter__'):
+            ent = tuple(ent)
+            if unroll_max < 0 or len(ent) <= unroll_max:
+                queue = it.chain(queue, ent)
+        elif ent.address() not in registered:
+            yield ent
 
 
 if __name__ == '__main__':
@@ -180,9 +186,12 @@ if __name__ == '__main__':
                         help='output path',
                         default=None)
     parser.add_argument('--unroll',
-                        help=('whether to output generated address ranges'
-                              ' or everything else'),
+                        help='if present, only unroll address ranges',
                         action='store_true')
+    parser.add_argument('--unrollmax',
+                        type=int,
+                        help='max. number of addresses to unroll',
+                        default=4)
     args = parser.parse_args()
     # Instantiate a generator to read in the solution set of addresses
     istrm = open(args.universe)
@@ -192,7 +201,7 @@ if __name__ == '__main__':
 
     istrm = open(args.registered)
     R = set(registered(istrm))
-    X = exclusion(U, R, args.unroll)
+    X = exclusion(U, R, args.unroll, args.unrollmax)
 
     if args.opath is None:
         from sys import stdout
