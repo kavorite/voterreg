@@ -37,14 +37,15 @@ class StreetAddress(object):
     def normalize(cls, street):
         street = street.lower().strip()
         tokens = street.split()
-        for i in range(len(tokens)):
-            # move cardinal qualifiers to end in order of appearance
+        for i in reversed(range(len(tokens))):
+            # move cardinal qualifiers to beginning in reverse order of
+            # appearance
             if tokens[i] in cls._directions:
                 t = tokens[i]
                 tokens = tokens[:i] + tokens[i+1:]
                 if t in cls._cardinal:
                     t = cls._cardinal[t]
-                tokens.append(t)
+                tokens = [t] + tokens
 
             # collapse all tokens before the last street qualifier into a
             # single word
