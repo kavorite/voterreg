@@ -66,15 +66,20 @@ if __name__ == '__main__':
     parties = list(set(oldReg.values()).union(set(newReg.values())))
     parties.sort(key=lambda party: newHist[party], reverse=True)
     partyidx = {party: i for i, party in enumerate(parties)}
-    J = np.zeros((len(parties), len(parties)), dtype='int64')
+    J = np.zeros((len(parties), len(parties)), dtype='int32')
     for vid in newReg.keys():
         i = partyidx[newReg[vid]]
         j = partyidx[oldReg[vid]]
-        J[i, j] += 1
+        if oldReg[vid] != newReg[vid]:
+            J[i, j] -= 1
+            J[j, i] += 1
+        else:
+            J[i, j] += 1
     df = pd.DataFrame(J, index=parties, columns=parties)
+    df.drop('NEW', axis=1, inplace=True)
     if stdout.isatty():
+        print('Adjacency:')
         print(df)
     else:
-        stdout.write(df.to_csv())
-        stdout.write('\n')
+        stdout.write(df.to_csv().replace('\r\n', '\n'))
 
