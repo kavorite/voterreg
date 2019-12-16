@@ -1,31 +1,31 @@
 import csv
 from collections import Counter
+import pandas as pd
+import numpy as np
+from sys import stdout
+
+class Hist(Counter):
+    def __init__(self, data):
+        super().__init__(data)
+
+    def normalize(self):
+        sigma = sum(self.values())
+        return {k: v/sigma for k, v in self.items()}
+    
+    def leaderboard(self):
+        keys = tuple(sorted(self.keys(), key=lambda k: self[k], reverse=True))
+        return '\n'.join(f'{k}: {self[k]}' for k in keys)
+
+    def pie(self, width):
+        hist = self.normalize()
+        keys = list(hist.keys())
+        keys.sort(key=lambda k: hist[k], reverse=True)
+        return ''.join(k[0]*int(hist[k]*width) for k in keys)
 
 
-def hist(keys):
-    C = Counter(iter(keys))
-    sigma = sum(C.values())
-    return {k: v/sigma for k, v in C.items()}
-
-
-def fmtHistLeaderboard(width, hist):
-    keys = list(hist.keys())
-    keys.sort(key=lambda k: hist[k], reverse=True)
-    bars = (f'{k} ({hist[k]*100:05.2f}%) ' + '#'*int(hist[k]*width)
-            for k in keys)
-    return '\n'.join(bars)
-
-
-def fmtHistPie(width, hist):
-    keys = list(hist.keys())
-    keys.sort(key=lambda k: hist[k], reverse=True)
-    return ''.join(k[0]*int(hist[k]*width) for k in keys)
-
-
-def prnHist(label, width, hist):
+def prnHist(label, hist):
     print(f'{label}: ')
-    print(fmtHistLeaderboard(width, hist))
-    # print(fmtHistPie(width, hist))
+    print(hist.leaderboard())
     print()
 
 
@@ -53,18 +53,28 @@ if __name__ == '__main__':
     # 1. build histograms of old and new snapshots
     # 2. build a "delta" leaderboard and "pie chart" the number of registrants
     # of each party that originated from each other
-    oldHist = hist(oldReg.values())
-    prnHist('Old distribution', 64, oldHist)
-    newHist = hist(newReg.values())
-    prnHist('New distribution', 64, newHist)
-    parties = set(oldReg.values()).union(set(newReg.values()))
-
+    oldHist = Hist(oldReg.values())
+    if stdout.isatty():
+        prnHist('Old distribution', oldHist)
+    newHist = Hist(newReg.values())
+    if stdout.isatty():
+        prnHist('New distribution', newHist)
     # set new voters in old distribution before computing affiliation deltas
     for k in newReg:
         if k not in oldReg:
             oldReg[k] = 'NEW'
+    parties = list(set(oldReg.values()).union(set(newReg.values())))
+    parties.sort(key=lambda party: newHist[party], reverse=True)
+    partyidx = {party: i for i, party in enumerate(parties)}
+    J = np.zeros((len(parties), len(parties)), dtype='int64')
+    for vid in newReg.keys():
+        i = partyidx[newReg[vid]]
+        j = partyidx[oldReg[vid]]
+        J[i, j] += 1
+    df = pd.DataFrame(J, index=parties, columns=parties)
+    if stdout.isatty():
+        print(df)
+    else:
+        stdout.write(df.to_csv())
+        stdout.write('\n')
 
-    for party in parties:
-        deltas = hist(oldReg[vid] for vid in newReg.keys()
-                      if newReg[vid] == party)
-        prnHist(f'Affiliation changes for {party}', 64, deltas)
