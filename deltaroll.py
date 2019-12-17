@@ -60,7 +60,7 @@ if __name__ == '__main__':
     # deltas
     for k in newReg:
         if k not in oldReg:
-            oldReg[k] = 'NEW'
+            oldReg[k] = 'New'
     parties = list(set(oldReg.values()).union(set(newReg.values())))
     parties.sort(key=lambda party: newHist[party], reverse=True)
     partyidx = {party: i for i, party in enumerate(parties)}
@@ -70,10 +70,12 @@ if __name__ == '__main__':
         j = partyidx[newReg[vid]]
         J[i, j] += 1
     df = pd.DataFrame(J, index=parties, columns=parties)
-    df.loc['TOT'] = df.sum()
-    df.loc['PRV'] = np.array([oldHist[k] for k in parties])
-    df.loc['RET'] = np.array([newHist[k]-oldHist[k] for k in parties])
-    df.drop('NEW', axis=1, inplace=True)
+    drops = Hist(v for k, v in oldReg.items() if k not in newReg)
+    df.loc['Total'] = df.sum()
+    df.loc['Previous'] = np.array([oldHist[k] for k in parties])
+    df.loc['Retained'] = np.array([newHist[k]-oldHist[k] for k in parties])
+    df.loc['Dropped'] = np.array([drops[k] for k in parties])
+    df.drop('New', axis=1, inplace=True)
     if stdout.isatty():
         print('Adjacency:')
         print(df)
