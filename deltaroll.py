@@ -55,12 +55,9 @@ if __name__ == '__main__':
     # 2. build a "delta" leaderboard and "pie chart" the number of registrants
     # of each party that originated from each other
     oldHist = Hist(oldReg.values())
-    if stdout.isatty():
-        prnHist('Old distribution', oldHist)
     newHist = Hist(newReg.values())
-    if stdout.isatty():
-        prnHist('New distribution', newHist)
-    # set new voters in old distribution before computing affiliation deltas
+    # express new voters in old distribution before computing affiliation
+    # deltas
     for k in newReg:
         if k not in oldReg:
             oldReg[k] = 'NEW'
@@ -68,26 +65,17 @@ if __name__ == '__main__':
     parties.sort(key=lambda party: newHist[party], reverse=True)
     partyidx = {party: i for i, party in enumerate(parties)}
     J = np.zeros((len(parties), len(parties)), dtype='int32')
-    for i, party in enumerate(parties):
-        J[i, i] = oldHist[party]
-    for vid in oldReg.keys():
+    for vid in set(oldReg.keys()).intersection(set(newReg.keys())):
         i = partyidx[oldReg[vid]]
-        if vid in newReg:
-            if newReg[vid] != oldReg[vid]:
-                j = partyidx[newReg[vid]]
-                J[i, j] += 1
-                J[j, i] -= 1
-            else:
-                continue
-        else:
-            J[i, i] -= 1
+        j = partyidx[newReg[vid]]
+        J[i, j] += 1
     df = pd.DataFrame(J, index=parties, columns=parties)
-    df.drop('NEW', axis=1, inplace=True)
     df.loc['TOT'] = df.sum()
-    # TODO: figure out why adjacency matrix column totals don't result in accurate delta sum
+    df.loc['PRV'] = np.array([oldHist[k] for k in parties])
+    df.loc['RET'] = np.array([newHist[k]-oldHist[k] for k in parties])
+    df.drop('NEW', axis=1, inplace=True)
     if stdout.isatty():
         print('Adjacency:')
         print(df)
     else:
         stdout.write(df.to_csv().replace('\r\n', '\n'))
-
