@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from sys import stdout
 
+
 class Hist(Counter):
     def __init__(self, data):
         super().__init__(data)
@@ -67,16 +68,23 @@ if __name__ == '__main__':
     parties.sort(key=lambda party: newHist[party], reverse=True)
     partyidx = {party: i for i, party in enumerate(parties)}
     J = np.zeros((len(parties), len(parties)), dtype='int32')
-    for vid in newReg.keys():
-        i = partyidx[newReg[vid]]
-        j = partyidx[oldReg[vid]]
-        if oldReg[vid] != newReg[vid]:
-            J[i, j] -= 1
-            J[j, i] += 1
+    for i, party in enumerate(parties):
+        J[i, i] = oldHist[party]
+    for vid in oldReg.keys():
+        i = partyidx[oldReg[vid]]
+        if vid in newReg:
+            if newReg[vid] != oldReg[vid]:
+                j = partyidx[newReg[vid]]
+                J[i, j] += 1
+                J[j, i] -= 1
+            else:
+                continue
         else:
-            J[i, j] += 1
+            J[i, i] -= 1
     df = pd.DataFrame(J, index=parties, columns=parties)
     df.drop('NEW', axis=1, inplace=True)
+    df.loc['TOT'] = df.sum()
+    # TODO: figure out why adjacency matrix column totals don't result in accurate delta sum
     if stdout.isatty():
         print('Adjacency:')
         print(df)
