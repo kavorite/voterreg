@@ -84,8 +84,6 @@ if __name__ == '__main__':
     df = pd.DataFrame(J, index=parties, columns=parties)
     df.drop('NEW', axis=1, inplace=True)
     df.loc['TOT'] = df.sum()
-    # TODO: figure out why adjacency matrix column totals don't result in accurate delta sum
-    if stdout.isatty():
         print('Adjacency:')
         print(df)
     else:
