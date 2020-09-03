@@ -5,6 +5,20 @@ import numpy as np
 from sys import stdout
 
 
+class BoEIndices(object):
+    '''
+    enumerate various useful data from the Monroe County BoE's DB schema
+    '''
+    vid = 0
+    surname = 1
+    givenName = 2
+    middleInitial = 3
+    suffix = 4
+    houseNumber = 5
+    street = 6
+    party = 25
+
+
 class Hist(Counter):
     def __init__(self, data):
         super().__init__(data)
@@ -12,7 +26,7 @@ class Hist(Counter):
     def normalize(self):
         sigma = sum(self.values())
         return {k: v/sigma for k, v in self.items()}
-    
+
     def leaderboard(self):
         keys = tuple(sorted(self.keys(), key=lambda k: self[k], reverse=True))
         return '\n'.join(f'{k}: {self[k]}' for k in keys)
@@ -30,54 +44,63 @@ def prnHist(label, hist):
     print()
 
 
+def stratify(oldPath, newPath, by=BoEIndices.vid, key=BoEIndices.party):
+    '''
+    Stratify unique voter registrations by given affiliation column, with their
+    party affiliation as the default; returns a np.ndarray representing the
+    adjacency matrix of various affiliations between snapshots
+    '''
+    with open(args.old) as istrm:
+        oldReg = {r[by]: r[key] for r in csv.reader(istrm)}
+
+    with open(args.new) as istrm:
+        newReg = {r[by]: r[key] for r in csv.reader(istrm)}
+
+    for k in newReg:
+        if k not in oldReg:
+            oldReg[k] = 'New'
+
+    oldHist = Hist(oldReg.values())
+    newHist = Hist(newReg.values())
+    keys = list(set(oldReg.values()).union(set(newReg.values())))
+    keys.sort(key=lambda k: newHist[k], reverse=True)
+    keyidx = {k: i for i, k in enumerate(keys)}
+    for k in newReg:
+        if k not in oldReg:
+            oldReg[k] = 'New'
+
+    J = np.zeros((len(keys), len(keys)), dtype='int32')
+    for vid in set(oldReg.keys()).intersection(set(newReg.keys())):
+        i = keyidx[oldReg[vid]]
+        j = keyidx[newReg[vid]]
+        J[i, j] += 1
+    df = pd.DataFrame(J, index=keys, columns=keys)
+    drops = Hist(v for k, v in oldReg.items() if k not in newReg)
+    df.loc['Total'] = df.sum()
+    df.loc['Previous'] = np.array([oldHist[k] for k in keys])
+    df.loc['Net Change'] = np.array([newHist[k]-oldHist[k] for k in keys])
+    df.loc['Dropped'] = np.array([drops[k] for k in keys])
+    df.drop('New', axis=1, inplace=True)
+    return df
+
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
-    parser = ArgumentParser('build a historgram of changing party affiliations'
-                            ' between two voter registration snapshots')
+    parser = ArgumentParser('catalog changes between two voter'
+                            ' registration snapshots')
     parser.add_argument('--old', help=('path from which to read the ascendant'
                                        ' snapshot'), required=True)
     parser.add_argument('--new', help=('path from which to read the descendant'
                                        ' snapshot'), required=True)
+    parser.add_argument('--summarize', help='summarize changes',
+                        action='store_true')
     args = parser.parse_args()
-    oldReg: dict = {}
-    newReg: dict = {}
-    
-    BOEIDX_VID = 38
-    BOEIDX_PTY = 25
-    with open(args.old) as istrm:
-        oldReg = {r[BOEIDX_VID]: r[BOEIDX_PTY] for r in csv.reader(istrm)}
 
-    with open(args.new) as istrm:
-        newReg = {r[BOEIDX_VID]: r[BOEIDX_PTY] for r in csv.reader(istrm)}
-
-    # describe changes:
-    # 1. build histograms of old and new snapshots
-    # 2. build a "delta" leaderboard and "pie chart" the number of registrants
-    # of each party that originated from each other
-    oldHist = Hist(oldReg.values())
-    newHist = Hist(newReg.values())
-    # express new voters in old distribution before computing affiliation
-    # deltas
-    for k in newReg:
-        if k not in oldReg:
-            oldReg[k] = 'New'
-    parties = list(set(oldReg.values()).union(set(newReg.values())))
-    parties.sort(key=lambda party: newHist[party], reverse=True)
-    partyidx = {party: i for i, party in enumerate(parties)}
-    J = np.zeros((len(parties), len(parties)), dtype='int32')
-    for vid in set(oldReg.keys()).intersection(set(newReg.keys())):
-        i = partyidx[oldReg[vid]]
-        j = partyidx[newReg[vid]]
-        J[i, j] += 1
-    df = pd.DataFrame(J, index=parties, columns=parties)
-    drops = Hist(v for k, v in oldReg.items() if k not in newReg)
-    df.loc['Total'] = df.sum()
-    df.loc['Previous'] = np.array([oldHist[k] for k in parties])
-    df.loc['Retained'] = np.array([newHist[k]-oldHist[k] for k in parties])
-    df.loc['Dropped'] = np.array([drops[k] for k in parties])
-    df.drop('New', axis=1, inplace=True)
+    # if args.summarize:
+    ledger = stratify(args.old, args.new)
     if stdout.isatty():
         print('Adjacency:')
-        print(df)
+        print(ledger)
     else:
-        stdout.write(df.to_csv().replace('\r\n', '\n'))
+        stdout.write(ledger.to_csv().replace('\r\n', '\n'))
+    exit()
